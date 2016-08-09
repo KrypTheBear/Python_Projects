@@ -6,6 +6,7 @@ Common abbreviations:
     oc = Object Class
     et = Enemy Type
     dmg = Damage
+    lt = Last Tick ; ct = Current Tick; dt = Delta Time
 
 '''
 
@@ -30,7 +31,7 @@ YELLOW  = (255, 255,   0)
 
 # === DISPLAY SETTINGS ===
 
-gameDisplay = pygame.display.set_mode((1200,700),pygame.DOUBLEBUF)
+gameDisplay = pygame.display.set_mode((1200,700),pygame.DOUBLEBUF|pygame.HWSURFACE)
 pygame.display.set_caption('Yet another sidescroller')
 font = pygame.font.SysFont("Segoe UI",75)
 
@@ -79,7 +80,7 @@ try:
             if Object.x <= 0:
                 Object.x = 1200
             else:
-                Object.x = Object.x - 10
+                Object.x = Object.x - 5
 
     def displayObjects(Object_class):
         for Object in Object_class.active_instances:
@@ -99,10 +100,9 @@ try:
     while not gameover:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                gameover = true
+                gameover = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 dust.create(((random.randint(1,1200)),(random.randint(1,700)))) # (((random x between (1 - 1200)),(random y between (1 - 700))) combined into one (x,y) bracket. Sick.
-
         # Moving particles
         for oc in active_object_classes:
             if oc.object_type == "particle":
@@ -113,8 +113,7 @@ try:
         for oc in active_object_classes:
             displayObjects(oc)
         pygame.display.update()
-        clock.tick(60)
-
+        clock.tick(120)
 # Exception handling
 # TODO: Don't let the program crash everytime, instead "catch" exceptions 
 
