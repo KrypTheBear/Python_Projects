@@ -1,9 +1,25 @@
-import pygame
-import time
-import sys
+'''
+Written by WME/KrypTheBear
+
+Common abbreviations:
+
+    oc = Object Class
+    et = Enemy Type
+    dmg = Damage
+
+'''
+
+# === IMPORTED MODULES ===
+
+import pygame                               # Required (obvious reasons)
+import time                                 # Required (tickrate)
+import sys                                  # Fonts, recommended
+import random                               # RNG for particles, recommended
+
+# Let there be light
 pygame.init()
 
-# Color Constants
+# === COLOR CONSTANTS ===
 
 BLACK   = (  0,   0,   0)
 WHITE   = (255, 255, 255)
@@ -12,68 +28,99 @@ GREEN   = (  0, 255,   0)
 BLUE    = (  0,   0, 255)
 YELLOW  = (255, 255,   0)
 
-# Display Settings
+# === DISPLAY SETTINGS ===
 
 gameDisplay = pygame.display.set_mode((1200,700),pygame.DOUBLEBUF)
 pygame.display.set_caption('Yet another sidescroller')
 font = pygame.font.SysFont("Segoe UI",75)
 
-# Constants and Variables
+# === CONSTANTS AND VARIABLES ===
 
-amount_of_particles = 0
+active_object_classes = []
+particle_slots = list(range(1,101))
 clock = pygame.time.Clock()
 gameover = False
 
 # Avoiding lots of headaches
-
 try:
-	'''
-	class projectile:
-		def __init__(self,direction,dmg,speed):
-			self.direction = direction
-			self.dmg = dmg
-			self.speed = speed
-		def __del__(self):
-	'''
-	class particle:
+    # === CLASSES ===
 
-		def __init__(self,name,color,position,size):				# Position and Size are stored like (x,y), on the coordinate system and as width/height respectively
-			self.name = name
-			self.color = color
-			self.position = position
-			self.size = size
+    # TODO: Projectile Class, IDs, properties
+    '''
+    class projectile:
+        def __init__(self,direction,dmg,speed):
+            self.direction = direction
+            self.dmg = dmg
+            self.speed = speed
+        def __del__(self):
+    '''
+    class particle:
 
-		def create(self):
-			amount_of_particles = amount_of_particles + 1
-			self.name + str(amount_of_particles) = 
+        active_instances = []
+        object_type = "particle"
 
+        def __init__(self,name,color,size):               # Size is stored as (x,y), width and height respectively
+            self.name = name
+            self.color = color
+            self.size = size
+            active_object_classes.append(self)
+            
+        def create(self,position):                        # Position is stored as (x,y), just as on your typical coordinate system
+            particle_number = min(particle_slots)
+            ID = self.name + str(particle_number)
+            ID = pygame.Rect(position[0], position[1], self.size[0], self.size[1])
+            particle_slots.remove(particle_number)
+            self.active_instances.append(ID)
 
-	def particleMovement(Object):
-	if Object.x <= 0:
-		Object.x = 1200
-	else:
-		Object.x = Object.x - 10
+    # === FUNCTIONS ===
 
-	def displayObject(Object):
-		pygame.draw.rect(gameDisplay, Object.color, Object)
+    def particleMovement(Object_class):
+        for Object in Object_class:
+            if Object.x <= 0:
+                Object.x = 1200
+            else:
+                Object.x = Object.x - 10
 
-	# def projectileMovement(Projectile):
+    def displayObjects(Object_class):
+        for Object in Object_class.active_instances:
+            pygame.draw.rect(gameDisplay, Object_class.color, Object)
 
+    # TODO: def projectileMovement(Projectile):
 
-	while not gameover:
-		for event in pygame.event.get():
-			if event.
+    # === Particles ===
 
-		# Refreshing the screen
+    dust = particle("dust",WHITE,(5,5))
+
+    # TODO: Enemies
+
+    # TODO: Player
+
+    # Main Loop, runs after everything has been loaded (hopefully)
+    while not gameover:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                gameover = true
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                dust.create(((random.randint(1,1200)),(random.randint(1,700)))) # (((random x between (1 - 1200)),(random y between (1 - 700))) combined into one (x,y) bracket. Sick.
+
+        # Moving particles
+        for oc in active_object_classes:
+            if oc.object_type == "particle":
+                particleMovement(oc.active_instances)
+
+        # Refreshing and displaying the screen
         gameDisplay.fill(BLACK)
+        for oc in active_object_classes:
+            displayObjects(oc)
         pygame.display.update()
         clock.tick(60)
 
-# Just some random code, don't mind me
+# Exception handling
+# TODO: Don't let the program crash everytime, instead "catch" exceptions 
 
 except Exception as e:
-	print(e)
-	pygame.quit()
-	sys.exit()
+    print(e)
+    pygame.quit()
+    sys.exit()
 
 pygame.quit()
