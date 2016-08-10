@@ -1,21 +1,36 @@
-import pygame
-import time
-import sys
+'''
+Written by WME/KrypTheBear
+
+Common abbreviations:
+    
+    L,R,U,D = Left, Right, Up, Down (as well as any combination, e.g. lu, rd)
+    direct = direction
+    AI = Artifical Intelligence (Sidemark: This example of AI isn't really intelligent. Just tracking the ball.)
+
+'''
+
+# === IMPORTED MODULES ===
+
+import pygame               # Required (obvious reasons)
+import time                 # Required (Tickrate)
+import sys                  # Fonts, recommended
+
+# Let there be light
 pygame.init()
 
 
-# Color Constants
+# === COLOR CONSTANTS ===
 
 BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 
-# Display Settings
+# === DISPLAY SETTINGS ===
 
 gameDisplay = pygame.display.set_mode((1200,700),pygame.DOUBLEBUF)
 pygame.display.set_caption('Pong I guess')
 font = pygame.font.SysFont("Segoe UI",75)
 
-# Required parameters and variables
+# === CONSTANTS, PARAMETERS AND VARIABLES ===
 
 clock = pygame.time.Clock()
 playerPaddle = pygame.Rect(50, 300, 20, 100)
@@ -27,15 +42,12 @@ difficultyfactor = 0.9
 gameover = False
 gamestate = "started"
 
-
 # Starting direction and score
-
 direction = "ld"
 scorePlayer = 0
 scoreAI = 0
 
 # Function to render the score onto the screen
-
 def scoreboard(player,AI):
     plyscore = font.render(str(player), 0, WHITE, BLACK)
     AIscore = font.render(str(AI), 0, WHITE, BLACK)
@@ -43,6 +55,7 @@ def scoreboard(player,AI):
     gameDisplay.blit(AIscore, (1050,-25))
     pygame.display.update()
 
+# Function for any other text to be displayed on the screen (Starts at y = 300px, x is variable)
 def othertext(text,x):
     gameDisplay.blit(font.render(str(text), 0, WHITE, BLACK), (x,300))
     pygame.display.update()
@@ -96,38 +109,38 @@ def Ball_Movement(direct):
 # Function to check if the Ball has collided with a rudder
 def Collision(Object,direct):
     if Object.colliderect(Ball):
-        if direct == "lu" or direct == "ld":
-            Ball.x = Ball.x + 10
-        elif direct == "rd" or direct == "ru":
+        if direct == "lu" or direct == "ld":            
+            Ball.x = Ball.x + 10                        # Pushing the Ball a bit away from whatever it collided with
+        elif direct == "rd" or direct == "ru":          # just to avoid a permanent collision
             Ball.x = Ball.x - 10
         return True
     else:
         return False
 
+# Main-loop
 while not gameover:
     try:
+        # A "main menu" while-loop, so the game doesn't simply start without the player being ready
         while gamestate == "started" and not gameover:
-
             # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     gameover = True
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type in (MOUSEBUTTONDOWN, KEYDOWN)
                     gamestate = "game"
-                if event.type == pygame.KEYDOWN:
-                    gamestate = "game"
+            # Updating and Refreshing the screen/viewport
             gameDisplay.fill(BLACK)
             othertext("Press any button to start the game",50)
             pygame.display.update()
-            clock.tick(60)
-            
+            clock.tick(70)
+        
+        # Actual game while-loop   
         while gamestate == "game" and not gameover:
-            
             # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     gameover = True
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 4:
                         difficultyfactor = difficultyfactor + 0.05
                         othertext("Difficulty increased!",300)
@@ -171,7 +184,6 @@ while not gameover:
             # Preventing the rectangles from crossing the top border
             if playerPaddle.y < 100:
                 playerPaddle.y = 100
-
             if AIPaddle.y < 100:
                 AIPaddle.y = 100
 
@@ -184,6 +196,7 @@ while not gameover:
             # Calling Movement, changing direction if necessary.
             direction = Ball_Movement(direction)
 
+            # Detecting whether the Ball has passed the left or right border, scoring accordingly
             if Ball.x <= 0:
                 scoreAI = scoreAI + 1
                 Ball.x = 900
@@ -191,7 +204,7 @@ while not gameover:
                 scorePlayer = scorePlayer + 1
                 Ball.x = 300
 
-            # Refreshing the screen
+            # Updating and Refreshing the screen
             gameDisplay.fill(BLACK)
             pygame.draw.rect(gameDisplay, WHITE, playerPaddle)
             pygame.draw.rect(gameDisplay, WHITE, AIPaddle)
@@ -200,19 +213,24 @@ while not gameover:
             scoreboard(scorePlayer,scoreAI)
             pygame.display.update()
 
-            clock.tick(60)
+            clock.tick(70)
 
+        # A simple pause-function, triggered by pressing any mouse button other than the mousewheel
         while gamestate == "paused" and not gameover:
-            
+            # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     gameover = True
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type == pygame.MOUSEBUTTONDOWN:
                     gamestate = "game"
+            # Writing "===PAUSED===" and refreshing the screen
             othertext("===PAUSED===",325)
             pygame.display.update()
-            clock.tick(60)
-                            
+            clock.tick(70)
+    
+    # Exception handling
+    # TODO: Prevent the program from crashing, should an Exception be raised
+    # Which >isn't< going to happen       
     except Exception as e:
         print(e)
         pygame.quit()
