@@ -1,9 +1,31 @@
-import pygame
-import time
-import sys
+'''
+Written by WME/KrypTheBear
+Common abbreviations:
+    oc = Object Class
+    et = Enemy Type
+    dmg = Damage
+    lt = Last Tick ; ct = Current Tick; dt = Delta Time
+    prj = Projectile
+
+    Changelog:
+
+    15.08.2016 16:41 - Set back to old version(Github) cause current version(Local) is non-working banana-code. Added changelog and traceback. Cleaned up code.
+               17:00 - Added ship class, first steps for projectiles.
+               17:15 - Added variable screen height and width and placeholder player-ship.
+    16.08.2016 09:00 - Reworked particle and ship classes. Added projectile class (Unfinished).
+'''
+
+# === IMPORTED MODULES ===
+
+import pygame                               # Required (obvious reasons)
+import time                                 # Required (tickrate)
+import sys                                  # Fonts, recommended. If removed: 
+import random                               # RNG for particles, recommended. If removed: Edit line 106
+import traceback                            # Useful for debugging. If removed: Remove line 123, replace with 'print(e)'
+
 pygame.init()
 
-# Color Constants
+# === COLOR CONSTANTS ===
 
 BLACK   = (  0,   0,   0)
 WHITE   = (255, 255, 255)
@@ -12,142 +34,147 @@ GREEN   = (  0, 255,   0)
 BLUE    = (  0,   0, 255)
 YELLOW  = (255, 255,   0)
 
-# Display Settings
+# === DISPLAY SETTINGS ===
 
-gameDisplay = pygame.display.set_mode((1200,700),pygame.DOUBLEBUF)
+gameDisplayX = 1200
+gameDisplayY = 700
+gameDisplay = pygame.display.set_mode((gameDisplayX,gameDisplayY),pygame.DOUBLEBUF)
 pygame.display.set_caption('Yet another sidescroller')
 font = pygame.font.SysFont("Segoe UI",75)
 
-# Required parameters and variables
+# === CONSTANTS AND VARIABLES ===
 
-amount_of_enemies = 0
-free_numbers = list(range(1,101))
-enemies = []
+active_object_classes = []
+particle_limit = 100
+ship_limit = 20
 clock = pygame.time.Clock()
 gameover = False
-gamestate = "active"
-
-# Avoiding a lot of headaches
 
 try:
-
     # === CLASSES ===
 
-    class Enemy:
+    class particle:
 
-    	projectilecount = 0
+        active_instances = []
+        object_type = "particle"
 
-    	def __init__(self, name, hp, dmg, speed, width, height):
-    		self.name = name
-    		self.hp = hp
-    		self.dmg = dmg
-    		self.speed = speed
-    		self.width = width
-    		self.height = height
+        def __init__(self,color,size):                    # Size is stored as (x,y), width and height respectively, color from color constants (obviously)
+            self.color = color
+            self.size = size
+            active_object_classes.append(self)
+            
+        def create(self,position):                        # Position is stored as (x,y), just as on your typical coordinate system
+            self.particle_amount =+ 1
+            if self.particle_amount <= particle_limit:
+                ID = pygame.Rect(position[0], position[1], self.size[0], self.size[1])          # In order to access the index, just use [particlename].active_instances[index]. 
+                self.active_instances.append(ID)
+            else:
+                self.particle_amount =- 1
+                print("Particle Limit Reached! %s not spawned!" % object_type)
 
-    	def spawn(self,x,y):
-    		amount_of_enemies = amount_of_enemies + 1
-    		self.number = min(free_numbers)
-    		free_numbers.remove(self.number)
-    		self.ID = "Enemy" + str(self.number)
-    		ID = self.ID
-    		enemies.append(ID)
-    		ID = pygame.Rect(x + self.width/2, y + self.height/2, self.width, self.height)
+        def destroy(self,number):
+            self.active_instances[number] = None
+            particle_slots.append(self.particle_number)
+            self.particle_number =- 1
+            self.active_instances.remove(None)
 
-    	def __del__(self):
-    		amount_of_enemies = amount_of_enemies - 1
-    		free_numbers.append(self.number)
-    		free_numbers.sort()
-    		enemies.remove(ID)
+    # TODO: Projectile Class, IDs, properties
 
-    	def movement(self,direction):
-    		if direction == "ru":
-    			ID.x = ID.x + 10 * self.speed
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "rd":
-    			ID.x = ID.x + 10 * self.speed
-    			ID.y = ID.y + 10 * self.speed
-    		elif direction == "ld":
-    			ID.x = ID.x - 10 * self.speed
-    			ID.y = ID.y + 10 * self.speed
-    		elif direction == "lu":
-    			ID.x = ID.x - 10 * self.speed
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "l":
-    			ID.x = ID.x - 10 * self.speed
-    		elif direction == "r":
-    			ID.x = ID.x + 10 * self.speed
-    		elif direction == "u":
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "d":
-    			ID.y = ID.y + 10 * self.speed
-    		else:
-    			raise Exception('Error in Enemy.movement, please use a proper direction!')
+    class projectile(particle):                                     # I laughed after realizing that a projectile is basically a particle. 
 
-    	def fire(self, dmg, direction):
-    		projectileID = ID + "Projectile" + str(projectilecount)
-    		projectileID = Projectile(direction,10,dmg,(self.x,self.y))
+        active_instances = []
+        object_type = "projectile"
 
+        def __init__(self,color,size,direction,dmg,speed):                                 
+            particle.__init__(self, color, size)                    # Afterwards I was ashamed of myself cause this should've come to my mind faster.  
+            self.direction = direction
+            self.dmg = dmg
+            self.speed = speed                                      # The difference between projectiles and particles is that projectiles collide with other objects
+                                                                    # And happen to damage them, if they have a health bar.
+        def create(self,position):
+            particle.create(self,position)                                                  
 
-    class Projectile:
-    	def __init__(self,direction,speed,dmg,origin):
-    		self.direction = direction
-    		self.speed = speed
-    		self.dmg = dmg
+        def destroy(self,number):  
+            particle.destroy(self,number)                                                                 
 
-    	def movement(self,direction):
-    		if direction == "ru":
-    			ID.x = ID.x + 10 * self.speed
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "rd":
-    			ID.x = ID.x + 10 * self.speed
-    			ID.y = ID.y + 10 * self.speed
-    		elif direction == "ld":
-    			ID.x = ID.x - 10 * self.speed
-    			ID.y = ID.y + 10 * self.speed
-    		elif direction == "lu":
-    			ID.x = ID.x - 10 * self.speed
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "l":
-    			ID.x = ID.x - 10 * self.speed
-    		elif direction == "r":
-    			ID.x = ID.x + 10 * self.speed
-    		elif direction == "u":
-    			ID.y = ID.y - 10 * self.speed
-    		elif direction == "d":
-    			ID.y = ID.y + 10 * self.speed
-    		else:
-    			raise Exception('Error in Projectile.movement, please use a proper direction!')
+    class ship:
 
+        active_instances = []
+        object_type = "ship"
 
+        def __init__(self,color,size):
+            self.color = color
+            self.size = size
+            active_object_classes.append(self)
 
+        def create(self,position):
+            self.ship_amount =+ 1
+            if self.ship_amount <= ship_limit:
+                ID = pygame.Rect(position[0], position[1], self.size[0], self.size[1])
+                self.active_instances.append(ID)
+            else:
+                self.ship_amount =- 1
+                print("Ship limit reached! %s not spawned!" % object_type)
 
+        def destroy(self,number):
+            self.active_instances[number] = None                # Get index, set to None.
+            self.ship_amount =- 1
+            self.active_instances.remove(None)                  # Delete the "None" we just created, so we won't have a list full of "None".
+
+        # def fire(self,number,prj_type):                       # Will be added once I finish the projectile class
+            # projectile.create((self.active_instances[number].x,self.active_instances[number].y),prj_type)
 
     # === FUNCTIONS ===
 
-        
-    # Main loop
+    def particleMovement(Object_class):
+        for Object in Object_class:
+            if Object.x <= 0:
+                Object.x = 1200
+            else:
+                Object.x = Object.x - 5
+
+    def displayObjects(Object_class):
+        for Object in Object_class.active_instances:
+            pygame.draw.rect(gameDisplay, Object_class.color, Object)
+
+    # === PARTICLES ===
+
+    dust = particle(WHITE,(5,5))
+    for x in range(50):
+        dust.create((random.randint(1,1200),random.randint(1,700)))
+
+    # TODO: Enemies ( Enemy class ( in classes ) and individual enemies ( here ) )
+
+    # TODO: Player ( Leaving the option for multiple player ships open for later. )
+
+    player = ship(BLUE,(50,50))
+    player.create((100,(0.5*gameDisplayY)))
+
+    # Main Loop, runs after everything has been loaded.
     while not gameover:
-    
-        # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 gameover = True
-        
-        # Game Logic
-        
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                player.destroy(0)
 
-        # Drawing Logic
+        # Moving particles
+        for oc in active_object_classes:
+            if oc.object_type == "particle":
+                particleMovement(oc.active_instances)
+
+        # Refreshing and displaying the screen
         gameDisplay.fill(BLACK)
-
+        for oc in active_object_classes:
+            displayObjects(oc)
         pygame.display.update()
+        clock.tick(120)                         # Pygame is very very VERY terrible at vsync. Having an relatively high clock/display rate allows me to not care about vsync.
 
-        clock.tick(60)
-        
+# Exception handling 
+
 except Exception as e:
-    print(e)
+    traceback.print_exc()
     pygame.quit()
     sys.exit()
 
 pygame.quit()
-            
