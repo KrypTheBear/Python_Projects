@@ -14,6 +14,7 @@ Common abbreviations:
                17:15 - Added variable screen height and width and placeholder player-ship.
     16.08.2016 09:00 - Reworked particle and ship classes. Added projectile class (Unfinished).
                13:32 - Reworked access to members of classes (Dictionary instead of list). Made code >slightly< more efficient.
+               17:13 - Fixed TypeErrors and AttributeErrors, destroying ships is working now.
 '''
 
 # === IMPORTED MODULES ===
@@ -76,10 +77,9 @@ try:
                 self.particle_amount =- 1
                 print("Particle Limit Reached! %s not spawned!" % object_type)
 
-        def destroy(self,number):
-            self.active_instances[number] = None
+        def destroy(self,instance):
             self.particle_number -= 1
-            self.active_instances.remove(None)
+            del self.active_instances[instance]
 
     # TODO: Projectile Class, IDs, properties
 
@@ -125,10 +125,9 @@ try:
                 self.ship_amount =- 1
                 print("Ship limit reached! %s not spawned!" % object_type)
 
-        def destroy(self,number):
-            self.active_instances[number] = None                # Get index, set to None.
+        def destroy(self,instance):
             self.ship_amount -= 1
-            self.active_instances.remove(None)                  # Delete the "None" we just created, so we won't have a list full of "None".
+            del self.active_instances[instance]
 
         # def fire(self,number,prj_type):                       # Will be added once I finish the projectile class
             # projectile.create((self.active_instances[number].x,self.active_instances[number].y),prj_type)
@@ -165,10 +164,10 @@ try:
             if event.type == pygame.QUIT:
                 gameover = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if "players" in active_object_classes:
-                    player.destroy(0)
+                if "player1" in ship.active_instances.keys():
+                    player.destroy("player1")
                 else:
-                    player.create((100,(0.5*gameDisplayY)),"player")
+                    player.create((100,(0.5*gameDisplayY)))
 
         # Moving particles
         for oc in active_object_classes:
