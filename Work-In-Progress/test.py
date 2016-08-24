@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import random
 import traceback
 
 pygame.init()
@@ -21,6 +22,7 @@ font = pygame.font.SysFont("Segoe UI",75)
 
 clock = pygame.time.Clock()
 gameover = False
+cooldown = 0
 
 try:
 
@@ -31,25 +33,25 @@ try:
     # x.size = (10,10)
     class particle:
 
-        def __init__(self,color,size)
+        def __init__(self,color,size):
             self.color = color
             self.size = size
             # Creating a private pool, works like: x.pool and not particle.pool
             self.pool = []
             # Filling pool after initializing is completed
-            for x in range(50):
+            for x in range(1000):
                 # Generating particles outside the Viewport, rendering them "inactive"
                 self.pool.append([pygame.Rect(-200, -200, self.size[0], self.size[1]),False])
 
         def create(self,position):
             # Fetching all tuples (Rectangle_Info,Status) ; item[0], item[1] respectively
-            for item in pool:
+            for item in self.pool:
                 # Fetch Status from tuple
                 if item[1] == False:
                     # Changing Rectangle.x to position(>x<,y)
-                    item[0].x = position[0]
+                    item[0].x = position[0] - 0.5*self.size[0]
                     # Changing Rectangle.y to position(x,>y<)
-                    item[0].y = position[1]
+                    item[0].y = position[1] - 0.5*self.size[1]
                     # Changing Status to "active"
                     item[1] = True
                     break
@@ -74,16 +76,42 @@ try:
 
         def displayparticles(self):
             for item in self.pool:
-                pygame.draw.rect(gameDisplay, self.color, item[0])
+                if item[1] == True:
+                    pygame.draw.rect(gameDisplay, self.color, item[0])
 
+    def othertext(text):
+        gameDisplay.blit(font.render(str(text), 0, WHITE, BLACK), (0,0))
 
+    meson = particle(GREEN,(10,10))
 
+    while not gameover:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                gameover = True
+            elif event.type == pygame.KEYDOWN:
+                index = 0
+                for item in meson.pool:
+                    if item[1] == True:
+                        meson.destroy(index)
+                        break
+                    index += 1
 
+        if pygame.mouse.get_pressed()[0] and cooldown <= 0:
+            mouserel = pygame.mouse.get_rel()
+            if abs(mouserel[0]) + abs(mouserel[1]) != 0:
+                meson.create((pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]))
+                cooldown = 0.01
 
+        counter = 0
+        for x in meson.pool:
+            if x[1] == True:
+                counter += 1
 
-
-
-
+        gameDisplay.fill(BLACK)
+        othertext(counter)
+        meson.displayparticles()
+        pygame.display.update()
+        cooldown -= clock.tick(120) / 1000
 
 except Exception:
     traceback.print_exc()
