@@ -1,11 +1,10 @@
 '''
 Written by WME/KrypTheBear
 Common abbreviations:
-    oc = Object Class
     et = Enemy Type
     dmg = Damage
-    lt = Last Tick ; ct = Current Tick; dt = Delta Time
     prj = Projectile
+    l, r, u, d = Left, Right, Up, Down, works in combinations (l/r | u/d)
 
     Changelog:
 
@@ -16,20 +15,21 @@ Common abbreviations:
                13:32 - Reworked access to members of classes (Dictionary instead of list). Made code >slightly< more efficient.
                17:13 - Fixed TypeErrors and AttributeErrors, destroying ships is working now.
     17.08.2016 15:48 - Added ShipMovement, added controls for player (W,A,S,D).
-    22.08.2016 12:00 - Massive class rework (pools, improved movement etc.) 
+    22.08.2016 12:00 - Massive class rework (pools, improved movement etc.)
+    29.08.2016 17:00 - Updated functions, classes, movement calls, rewrote some comments
 '''
 
 # === IMPORTED MODULES ===
 
 import pygame                               # Required (obvious reasons)
 import time                                 # Required (tickrate)
-import math                                 # Required (movement calculation)
+from math import sqrt                       # Required (movement calculation), not taking whole math cause we only need square root
 import sys                                  # Fonts, recommended. If removed: 
 import random                               # RNG for particles, recommended. If removed: Edit line 106
 import traceback                            # Useful for debugging. If removed: Remove line 123, replace with 'print(e)'
 
 pygame.init()
-pygame.key.set_repeat(10, 10)
+pygame.key.set_repeat(10, 10)               # Making sure we can actually hold down keys by repeating input
 
 # === COLOR CONSTANTS ===
 
@@ -42,7 +42,7 @@ YELLOW  = (255, 255,   0)
 
 # === DISPLAY SETTINGS ===
 
-gameDisplayX = 1200
+gameDisplayX = 1200                         # X,Y can be anything within your monitor resolution
 gameDisplayY = 700
 gameDisplay = pygame.display.set_mode((gameDisplayX,gameDisplayY),pygame.DOUBLEBUF)
 pygame.display.set_caption('Yet another sidescroller')
@@ -56,22 +56,23 @@ gameover = False
 try:
     # === CLASSES ===
 
-    class thing:
+    class moving_thing:                     # Defining a superclass for all moving things in the game
 
-        def __init__(self,color,size):
-            self.color = color
-            self.size = size        # Size is a 
-            # Creating a private pool, works like: x.pool and not particle.pool
+        def __init__(self,color,size,speed,poolsize):
+            self.color = color              # Accepted colors are found in COLOR CONSTANTS
+            self.size = size                # Size is stored as a (XSize, YSize) pair
+            self.speed = speed              # Speed is an integer (at best something between 1-20)
+            # Creating a private pool
             self.pool = []
             # Filling pool after initializing is completed
-            for x in range(1000):
-                # Generating particles outside the Viewport, rendering them "inactive"
+            for x in range(poolsize):
+                # Generating particles outside the Viewport(-200, -200), giving them the defined size(XSize, YSize), rendering them "inactive"
                 self.pool.append([pygame.Rect(-200, -200, self.size[0], self.size[1]),False])
 
         def create(self,position):
             # Fetching all pairs (Rectangle_Info,Status) ; item[0], item[1] respectively
             for item in self.pool:
-                # Fetch Status from pair
+                # Fetch Status from one pair
                 if item[1] == False:
                     # Changing Rectangle.x to position(>x<,y)
                     item[0].x = position[0] - 0.5*self.size[0]
@@ -79,9 +80,11 @@ try:
                     item[0].y = position[1] - 0.5*self.size[1]
                     # Changing Status to "active"
                     item[1] = True
+                    # End iteration, as we only create one instance
                     break
+            
 
-        def fetch_index(self,position):         # May become obsolete
+        def fetch_index(self,position):         # May become obsolete, leaving this here for now.
             # Same idea as above, slightly changed
             index = 0
             for item in pool:
@@ -99,126 +102,77 @@ try:
             self.pool[index][0].x = -200
             self.pool[index][0].y = -200
 
+        def movement(self,direction):                       # Direction MUST be L,R,U,D or logical combinations (LU, UR etc)
+            # Fetching all pairs in pool
+            for item in self.pool:
+                # If active, move in defined direction
+                if item[1] == True:
+                    if item[0].y >= 0 + 10 * self.speed:
+                        if direction == "u":
+                            item[0].y -= 10 * self.speed
+                            break
+                    if item[0].y < gameDisplayY - 10 * self.speed - self.size[1]:
+                        if direction == "d":
+                            item[0].y += 10 * self.speed
+                            break
+                    if item[0].x < gameDisplayX - 10 * self.speed - self.size[0]:
+                        if direction == "r":
+                            item[0].x += 10 * self.speed
+                            break
+                    if item[0].x >= 0 + 10 * self.speed:
+                        if direction == "l":
+                            item[0].x -= 10 * self.speed
+                            break
+
         def displaythings(self):
             for item in self.pool:
                 if item[1] == True:
                     # Get position and color, display on gameDisplay
                     pygame.draw.rect(gameDisplay, self.color, item[0])
+                    
 
-    class projectile(thing):
+    class projectile(moving_thing):
 
-        def __init__(self,color,size,dmg,speed):                                 
-            thing.__init__(self,color,size)
-            self.dmg = dmg
-            self.speed = speed     
+        def __init__(self,color,size,dmg,speed,poolsize):                                 
+            moving_thing.__init__(self,color,size,speed,poolsize)
+            self.dmg = dmg                              # dmg should be somewhere between 1-9 (TODO: Health points)              
 
-        def create(self,position,direction):
-            thing.create(self,position)
-            self.direction = direction
+        # TODO def collision
+            
 
-        def projectilemovement(self):
-            for item in self.pool:
-                if item[1] == True:
-                    if self.direction == "u":
-                        item[0].y -= 10 * speed
-                    elif self.direction == "ru":
-                        item[0].x += sqrt(10 * speed)
-                        item[0].y -= sqrt(10 * speed)
-                    elif self.direction == "r":
-                        item[0].x += 10 * speed
-                    elif self.direction == "rd":
-                        item[0].x += sqrt(10 * speed)
-                        item[0].y += sqrt(10 * speed)
-                    elif self.direction == "d":
-                        item[0].y += 10 * speed
-                    elif self.direction == "ld":
-                        item[0].x -= sqrt(10 * speed)
-                        item[0].y += sqrt(10 * speed)
-                    elif self.direction == "l":
-                        item[0].x -= 10 * speed
-                    elif self.direction == "ul":
-                        item[0].x -= sqrt(10 * speed)
-                        item[0].y -= sqrt(10 * speed)
+    class ship(moving_thing):
 
+        def __init__(self,color,size,weapons,speed,poolsize):
+            moving_thing.__init__(self,color,size,speed,poolsize)
+            # Weapons are stored like this:
+            # 000000, with each number being a weapon slot
+            # e.g. 102011 would mean: weapon 1 in slot 1,5,6 and weapon 2 in slot 3
+            self.weapons = weapons
 
-    class ship:
+        # TODO: def fire_weapon
 
-        def __init__(self,color,size):
-            thing.__init__(self,color,size)
-
-        def create(self,position):
-            thing.destroy(self,position)
-
-        def destroy(self,instance):
-            self.ship_amount -= 1
-            del self.active_instances[instance]
+        # TODO: conditional on ship.destroy
 
     # === FUNCTIONS ===
 
-    def particleMovement(oc):
-        for Object in oc.active_instances.values():
-            if Object.x <= 0:
-                Object.x = 1200
-            else:
-                Object.x = Object.x - 5
-
-    def projectileMovement(oc):
-        new_instances = {}
-        for Object in oc.active_instances:
-            if oc.active_instances[Object].x <= 0 or oc.active_instances[Object].x >= gameDisplayX:
-                new_instances = oc.destroy("%s" % Object)
-            elif oc.direction == "left":
-                oc.active_instances[Object].x -= 10
-                new_instances = oc.active_instances
-            elif oc.direction == "right":
-                oc.active_instances[Object].x += 10
-                new_instances = oc.active_instances
-
-        return new_instances
-
-    def shipMovement(name,direction):
-        Object = ship.active_instances[name]
-        # Handling Movement for X - Coordinates
-        if Object.x < 0:
-            Object.x = 0
-        elif Object.x + Object[2] > gameDisplayX:
-            Object.x = gameDisplayX - Object[2]
-        else:
-            if direction == "left":
-                Object.x -= 5
-            elif direction == "right":
-                Object.x += 5
-
-        # Handling Movement for Y - Coordinates
-        if Object.y < 0:
-            Object.y = 0
-        elif Object.y + Object[3] > gameDisplayY:
-            Object.y = gameDisplayY - Object[3]
-        else:
-            if direction == "up":
-                Object.y -= 5
-            elif direction == "down":
-                Object.y += 5
-            
-    def displayObjects(Object_class):
-        for Object in Object_class.active_instances.values():
-            pygame.draw.rect(gameDisplay, Object_class.color, Object)
+    # A lot of obsolete functions removed - 29.08.2016 16:43
+    # TODO: Do I actually need functions or will I just stuff classes?
+    # Consideration: Exporting classes into a seperate .py, importing this on startup
+    # Should avoid cluttering
 
     # === PARTICLES ===
 
-    dust = particle(WHITE,(5,5),"dust")
-    for x in range(50):
-        dust.create((random.randint(1,1200),random.randint(1,700)))
+    dust = moving_thing(WHITE,(20,20),10,200)
 
     # === PROJECTILES ===
 
-    maser = projectile(GREEN,(5,5),5,5,"maser")
+    maser = projectile(GREEN,(5,5),1,10,500)
 
     # TODO: Enemies ( Enemy class ( in classes ) and individual enemies ( here ) )
 
     # TODO: Player ( Leaving the option for multiple player ships open for later. )
 
-    player = ship(BLUE,(50,50),"player")
+    player = ship(BLUE,(50,50),000000,1,1)
     player.create((100,(0.5*gameDisplayY)))
 
     # Main Loop, runs after everything has been loaded.
@@ -227,8 +181,8 @@ try:
             if event.type == pygame.QUIT:
                 gameover = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if "player1" in ship.active_instances.keys():
-                    player.destroy("player")
+                if player.pool[0] == True:
+                    player.destroy(0)
                 else:
                     player.create((100,(0.5*gameDisplayY)))
                 
@@ -237,32 +191,28 @@ try:
         if keys[119] and keys[115]:
             None                                        # Just like in my Pong project. Works just as intended.
         elif keys[119]:                                 # As to why I elif'ed U,D & R,L:
-            shipMovement("player","up")                 # You can't really press both at the same time, and if you do, nothing happens. The ship stops.
+            player.movement("u")                        # You can't really press both at the same time, and if you do, nothing happens. The ship stops.
         elif keys[115]:
-            shipMovement("player","down")
+            player.movement("d")
 
         if keys[100] and keys[97]:
             None
         elif keys[100]:
-            shipMovement("player","right")
+            player.movement("r")
         elif keys[97]:
-            shipMovement("player","left")
+            player.movement("l")
 
         if keys[32]:
-            maser.create((player.active_instances["player"].x,player.active_instances["player"].y),"right")
+            maser.create((player.pool[0][0].x,player.pool[0][0].y))
             print("Maser created")
 
-        # Moving particles
-        for oc in active_object_classes:                # Just in case I wish to seperate certain particles from others (like explosions)
-            if oc.object_type == "particle":
-                particleMovement(oc)
-            if oc.object_type == "projectile":
-                oc.active_instances = projectileMovement(oc)
+        # TODO: Write particle movement handling
 
         # Refreshing and displaying the screen
         gameDisplay.fill(BLACK)
-        for oc in active_object_classes:
-            displayObjects(oc)
+        player.displaythings()
+        maser.displaythings()
+        dust.displaythings()
         pygame.display.update()
         clock.tick(120)                         # Pygame is very very VERY terrible at vsync. Having an relatively high clock/display rate allows me to not care about vsync.
 
