@@ -8,15 +8,11 @@ Common abbreviations:
 
     Changelog:
 
-    15.08.2016 16:41 - Set back to old version(Github) cause current version(Local) is non-working banana-code. Added changelog and traceback. Cleaned up code.
-               17:00 - Added ship class, first steps for projectiles.
-               17:15 - Added variable screen height and width and placeholder player-ship.
-    16.08.2016 09:00 - Reworked particle and ship classes. Added projectile class (Unfinished).
-               13:32 - Reworked access to members of classes (Dictionary instead of list). Made code >slightly< more efficient.
-               17:13 - Fixed TypeErrors and AttributeErrors, destroying ships is working now.
     17.08.2016 15:48 - Added ShipMovement, added controls for player (W,A,S,D).
     22.08.2016 12:00 - Massive class rework (pools, improved movement etc.)
     29.08.2016 17:00 - Updated functions, classes, movement calls, rewrote some comments
+    06.09.2016 16:30 - Added collision (Not efficient, not at all, but effective.), added test enemy class, added lists for easier accessability
+                        + Slight code clean up
 '''
 
 # === IMPORTED MODULES ===
@@ -47,6 +43,9 @@ gameDisplayY = 700
 gameDisplay = pygame.display.set_mode((gameDisplayX,gameDisplayY),pygame.DOUBLEBUF)
 pygame.display.set_caption('Yet another sidescroller')
 font = pygame.font.SysFont("Segoe UI",75)
+things_to_display = []
+ships = []
+projectiles = []
 
 # === CONSTANTS AND VARIABLES ===
 
@@ -68,6 +67,7 @@ try:
             for x in range(poolsize):
                 # Generating particles outside the Viewport(-200, -200), giving them the defined size(XSize, YSize), rendering them "inactive"
                 self.pool.append([pygame.Rect(-200, -200, self.size[0], self.size[1]),False])
+            things_to_display.append(self)
 
         def create(self,position):
             # Fetching all pairs (Rectangle_Info,Status) ; item[0], item[1] respectively
@@ -133,11 +133,28 @@ try:
 
     class projectile(moving_thing):
 
-        def __init__(self,color,size,dmg,speed,poolsize):                                 
+        def __init__(self,color,size,dmg,speed,poolsize,direction):                                 
             moving_thing.__init__(self,color,size,speed,poolsize)
             self.dmg = dmg                              # dmg should be somewhere between 1-9 (TODO: Health points)              
+            self.direction = direction
+            projectiles.append(self)
 
-        # TODO def collision
+        def movement(self):
+            # Adding an index so we can destroy any objects outside of the viewport
+            index = -1
+            for item in self.pool:
+                index += 1
+                if item[1] == True:
+                    if self.direction == "u":
+                        item[0].y -= 2 * self.speed
+                    elif self.direction == "d":
+                        item[0].y += 2 * self.speed
+                    elif self.direction == "l":
+                        item[0].x -= 2 * self.speed
+                    elif self.direction == "r":
+                        item[0].x += 2 * self.speed
+                    if item[0].x < 0 or item[0].x > gameDisplayX or item[0].y < 0 or item[0].y > gameDisplayY:
+                        self.destroy(index)
             
 
     class ship(moving_thing):
@@ -148,10 +165,21 @@ try:
             # 000000, with each number being a weapon slot
             # e.g. 102011 would mean: weapon 1 in slot 1,5,6 and weapon 2 in slot 3
             self.weapons = weapons
+            ships.append(self)
 
         # TODO: def fire_weapon
 
-        # TODO: conditional on ship.destroy
+        def check_collided(self):
+            index = -1
+            pool_objects = []
+            for x in projectiles:
+                for y in x.pool:
+                    pool_objects.append(y[0])
+            for item in self.pool:
+                index += 1
+                if item[1] == True:
+                    if item[0].collidelist(pool_objects) != -1:
+                        self.destroy(index)
 
     # === FUNCTIONS ===
 
@@ -166,9 +194,12 @@ try:
 
     # === PROJECTILES ===
 
-    maser = projectile(GREEN,(5,5),1,10,500)
+    maser = projectile(GREEN,(5,5),1,5,500,"r")
 
-    # TODO: Enemies ( Enemy class ( in classes ) and individual enemies ( here ) )
+    # TODO: Enemies 
+
+    evil1 = ship(RED,(50,50),000000,1,10)
+    evil1.create((800,(0.5*gameDisplayY)))
 
     # TODO: Player ( Leaving the option for multiple player ships open for later. )
 
@@ -176,12 +207,13 @@ try:
     player.create((100,(0.5*gameDisplayY)))
 
     # Main Loop, runs after everything has been loaded.
+    then = time.time()
     while not gameover:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 gameover = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if player.pool[0] == True:
+                if player.pool[0][1] == True:
                     player.destroy(0)
                 else:
                     player.create((100,(0.5*gameDisplayY)))
@@ -203,18 +235,23 @@ try:
             player.movement("l")
 
         if keys[32]:
-            maser.create((player.pool[0][0].x,player.pool[0][0].y))
-            print("Maser created")
+            now = time.time()
+            if now - then > 0.1:
+                maser.create((player.pool[0][0].x + player.size[0],player.pool[0][0].y + 1/2 * player.size[1]))         # Generate maser so it looks like it's coming from the middle-front of the ship
+                then = now
 
-        # TODO: Write particle movement handling
+        maser.movement()
+
+        for item in ships:
+            item.check_collided()
 
         # Refreshing and displaying the screen
         gameDisplay.fill(BLACK)
-        player.displaythings()
-        maser.displaythings()
-        dust.displaythings()
+        for item in things_to_display:          # Using a list of items to display so I don't have to spam lines of "displaythings()"
+            item.displaythings()
         pygame.display.update()
         clock.tick(120)                         # Pygame is very very VERY terrible at vsync. Having an relatively high clock/display rate allows me to not care about vsync.
+        
 
 # Exception handling 
 
