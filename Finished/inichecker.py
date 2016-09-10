@@ -3,12 +3,13 @@ import glob, re, os
 # OS to get the current workingdir
 # re for our most beloved regex
 
-workingdir = os.getcwd()
-with open("vars.txt", "w") as text:
-    for file in glob.glob("%s/**/*.ini" % workingdir, recursive=True):
-        with open(file, "r+") as check:
-            text.write("%s : \n" % file)
-            m = re.findall("^([^\W]+(?==\s*30))", check.read(), re.M)
-            for part in m:
-                text.write("%s\n" % part)
-            text.write("\n")
+def inichecker(varvalue):
+    workingdir = os.getcwd()
+    with open("vars.txt", "w") as text:
+        for file in glob.glob("%s/**/*.ini" % workingdir, recursive=True):
+            with open(file, "r+") as check:
+                text.write("%s : \n" % file)
+                m = re.findall("^([^\W]+(?==\s*"+re.escape(varvalue)+"))", check.read(), re.M)
+                for part in m:
+                    text.write("%s\n" % part)
+                text.write("\n")
