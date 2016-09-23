@@ -1,30 +1,24 @@
 '''
 Written by WME/KrypTheBear
 Python script responsible for game and display logic for the spaceshooter game
-Common abbreviations:
-    et = Enemy Type
-    dmg = Damage
-    prj = Projectile
-    l, r, u, d = Left, Right, Up, Down, works in combinations (l/r | u/d)
 
-    Changelog:
+Changelog moved to README.md in this folder
 
-    17.08.2016 15:48 - Added ShipMovement, added controls for player (W,A,S,D).
-    22.08.2016 12:00 - Massive class rework (pools, improved movement etc.)
-    29.08.2016 17:00 - Updated functions, classes, movement calls, rewrote some comments
-    06.09.2016 16:30 - Added collision (Not efficient, not at all, but effective.), added test enemy class, added lists for easier accessability
-                        + Slight code clean up
-    23.09.2016 15:00 - Added seperate .py files for classes and settings, removed them from the game logic .py file
+    Pretty much done with the base structure. Remaining major TODOs:
+        - Leave squares as hitboxes, replace their display with image file
+        - Enemy AI
+        - Level generation/Enemy spawn algorithm
 '''
 
 # === IMPORTED MODULES ===
 
 import pygame                               # Required (obvious reasons)
 import time                                 # Required (tickrate)
-import sys                                  # Fonts, recommended. If removed: 
-import random                               # RNG for particles, recommended. If removed: Edit line 106
-import traceback                            # Useful for debugging. If removed: Remove line 123, replace with 'print(e)'
+import sys                                  # Required for text (to be implemented)
+import random                               # Required for RNG
+import traceback                            # Useful for debugging. If removed: Replace traceback.print_exc() with print(e)
 from settings import *
+from classes import *
 
 # === COLOR CONSTANTS ===
 
@@ -35,17 +29,14 @@ GREEN   = (  0, 255,   0)
 BLUE    = (  0,   0, 255)
 YELLOW  = (255, 255,   0)
 
-from classes import *
-
-
-# === CONSTANTS AND VARIABLES ===
-
 gameover = False
 
 try:
     # === PARTICLES ===
 
-    dust = moving_thing(WHITE,(20,20),10,200)
+    dust = particle(WHITE,(2,2),10,200,"l",True)
+    for x in range(50):
+        dust.create((random.randint(0,gameDisplayX),random.randint(0,gameDisplayY)))
 
     # === PROJECTILES ===
 
@@ -92,10 +83,12 @@ try:
                 maser.create((player.pool[0][0].x + player.size[0],player.pool[0][0].y + 1/2 * player.size[1]))         # Generate maser so it looks like it's coming from the middle-front of the ship
                 then = now
 
-        maser.movement()
-
+        for item in projectiles:
+            item.movement()
         for item in ships:
             item.check_collided()
+        for item in particles:
+            item.movement()
 
         # Refreshing and displaying the screen
         gameDisplay.fill(BLACK)

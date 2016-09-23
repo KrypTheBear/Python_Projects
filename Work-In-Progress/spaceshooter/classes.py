@@ -1,7 +1,7 @@
 '''
 Written by WME/KrypTheBear
 Python script to load all game relevant classes for the spaceshooter game
-Ver 1.0.0
+Ver 1.1.5 - Now more pythonic!
 '''
 
 import pygame
@@ -13,6 +13,8 @@ then = time.time()
 things_to_display = []
 projectiles = []
 ships = []
+particles = []
+
 try:
     class moving_thing:                     # Defining a superclass for all moving things in the game
 
@@ -32,7 +34,7 @@ try:
             # Fetching all pairs (Rectangle_Info,Status) ; item[0], item[1] respectively
             for item in self.pool:
                 # Fetch Status from one pair
-                if item[1] == False:
+                if not item[1]:
                     # Changing Rectangle.x to position(>x<,y)
                     item[0].x = position[0] - 0.5*self.size[0]
                     # Changing Rectangle.y to position(x,>y<)
@@ -48,7 +50,7 @@ try:
             index = 0
             for item in pool:
                 index += 1
-                if item[1] == True:
+                if item[1]:
                     # Checking if the passed position matches any active item
                     if item[0].x == position[0] and item[0].y == position[1]:
                         # And returns the index, so we can use it (e.g. collision management)
@@ -65,7 +67,7 @@ try:
             # Fetching all pairs in pool
             for item in self.pool:
                 # If active, move in defined direction
-                if item[1] == True:
+                if item[1]:
                     if item[0].y >= 0 + 10 * self.speed:
                         if direction == "u":
                             item[0].y -= 10 * self.speed
@@ -85,11 +87,47 @@ try:
 
         def displaythings(self):
             for item in self.pool:
-                if item[1] == True:
+                if item[1]:
                     # Get position and color, display on gameDisplay
 
                     pygame.draw.rect(gameDisplay, self.color, item[0])
                     
+    class particle(moving_thing):
+
+        def __init__(self,color,size,speed,poolsize,direction,persistent):
+            moving_thing.__init__(self,color,size,speed,poolsize)
+            self.direction = direction
+            self.persistent = persistent
+            particles.append(self)
+
+        def movement(self):
+            index = -1
+            if self.persistent:
+                for item in self.pool:
+                    if item[1]:
+                        if item[0].x <= 0:
+                            item[0].x = gameDisplayX - 20
+                        elif item[0].x >= gameDisplayX:
+                            item[0].x = 20
+                        elif item[0].y <= 0:
+                            item[0].y = gameDisplayY - 20
+                        elif item[0].y >= gameDisplayY:
+                            item[0].y = 20
+                        else:
+                            if self.direction == "u":
+                                item[0].y -= 0.5 * self.speed
+                            elif self.direction == "d":
+                                item[0].y += 0.5 * self.speed
+                            elif self.direction == "l":
+                                item[0].x -= 0.5 * self.speed
+                            elif self.direction == "r":
+                                item[0].x += 0.5 * self.speed
+            else:
+                for item in self.pool:
+                    index += 1
+                    if item[1]:
+                        if item[0].x <= 0 or item[0].x >= gameDisplayX or item[0].y <= 0 or item[0].y >= gameDisplayY:
+                            self.destroy(index)
 
     class projectile(moving_thing):
 
@@ -104,7 +142,7 @@ try:
             index = -1
             for item in self.pool:
                 index += 1
-                if item[1] == True:
+                if item[1]:
                     if self.direction == "u":
                         item[0].y -= 2 * self.speed
                     elif self.direction == "d":
@@ -137,7 +175,7 @@ try:
                     pool_objects.append(y[0])
             for item in self.pool:
                 index += 1
-                if item[1] == True:
+                if item[1]:
                     if item[0].collidelist(pool_objects) != -1:
                         self.destroy(index)
 
