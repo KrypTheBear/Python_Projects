@@ -1,7 +1,7 @@
 '''
 Written by WME/KrypTheBear
 Python script to load all game relevant classes for the spaceshooter game
-Ver 1.1.5 - Now more pythonic!
+CLASSES Ver 1.2.1 - Now more pythonic!
 '''
 
 import pygame
@@ -16,15 +16,44 @@ ships = []
 particles = []
 
 try:
-    class moving_thing:                     # Defining a superclass for all moving things in the game
+    '''
+    Moving_thing superclass for all moving things in the game.
+
+    Methods:
+        __init__(parameters): 
+            - Saving all relevant parameters in self.parameter (color, size, speed)
+            - Filling a private pool (self.pool) with inactive objects, which has a limited poolsize
+            - Appending to list of classes whose objects can be displayed (things_to_display)
+
+        create((x,y)):
+            - Changing one object (the lowest in the list) to active status
+            - Moving to position (x,y)
+
+        destroy(index)
+            - sets an item matching the given index in the pool back to inactive status and resets it's position to (-200,-200)
+
+        movement(direction)
+            - Function responsible for moving all active objects in the pool in a certain direction
+            - TODO: Change to independant movement? Assign direction var to items in pool?
+
+        displaythings()
+            - Displays all active items in pool
+
+    Parameters:
+        - color: constant, found in COLOR CONSTANTS in settings.py
+        - size: stored as a (XSize, YSize) pair, XSize & YSize are integers
+        - speed: Integer value (recommended var: between 1-20)
+        - poolsize: Integer value, defines the range of the pool
+        - x,y: Integer value, should usually be in range(gameDisplayX),range(gameDisplayY), except when destroying items
+        - direction: String value, "u","d","l","r" (case sensitive, lowercase only)
+    '''
+    class moving_thing:
 
         def __init__(self,color,size,speed,poolsize):
-            self.color = color              # Accepted colors are found in COLOR CONSTANTS
-            self.size = size                # Size is stored as a (XSize, YSize) pair
-            self.speed = speed              # Speed is an integer (at best something between 1-20)
-            # Creating a private pool
+            self.color = color
+            self.size = size
+            self.speed = speed
             self.pool = []
-            # Filling pool after initializing is completed
             for x in range(poolsize):
                 # Generating particles outside the Viewport(-200, -200), giving them the defined size(XSize, YSize), rendering them "inactive"
                 self.pool.append([pygame.Rect(-200, -200, self.size[0], self.size[1]),False])
@@ -43,22 +72,8 @@ try:
                     item[1] = True
                     # End iteration, as we only create one instance
                     break
-            
-
-        def fetch_index(self,position):         # May become obsolete, leaving this here for now.
-            # Same idea as above, slightly changed
-            index = 0
-            for item in pool:
-                index += 1
-                if item[1]:
-                    # Checking if the passed position matches any active item
-                    if item[0].x == position[0] and item[0].y == position[1]:
-                        # And returns the index, so we can use it (e.g. collision management)
-                        return index
-                        break
 
         def destroy(self,index):
-            # Setting an item with defined index in our pool back to "inactive"
             self.pool[index][1] = False
             self.pool[index][0].x = -200
             self.pool[index][0].y = -200
@@ -71,27 +86,41 @@ try:
                     if item[0].y >= 0 + 10 * self.speed:
                         if direction == "u":
                             item[0].y -= 10 * self.speed
-                            break
+                            continue
                     if item[0].y < gameDisplayY - 10 * self.speed - self.size[1]:
                         if direction == "d":
                             item[0].y += 10 * self.speed
-                            break
+                            continue
                     if item[0].x < gameDisplayX - 10 * self.speed - self.size[0]:
                         if direction == "r":
                             item[0].x += 10 * self.speed
-                            break
+                            continue
                     if item[0].x >= 0 + 10 * self.speed:
                         if direction == "l":
                             item[0].x -= 10 * self.speed
-                            break
+                            continue
 
         def displaythings(self):
             for item in self.pool:
                 if item[1]:
                     # Get position and color, display on gameDisplay
-
                     pygame.draw.rect(gameDisplay, self.color, item[0])
-                    
+
+    '''
+    Particle class inheriting from moving_thing class
+
+    Methods:
+        __init__(parameters):
+            - color, size, speed, poolsize same as moving_thing
+            - Direction is predefined and saved in self (can be changed in runtime, name.direction = newdirect)
+            - Persistence states whether a particle is destroyed after reaching the border of the game display
+            - self is appended to both things_to_display and particles
+
+        movement():
+            - Checks if class object is persistent
+            - If persistent: Move active items in self.pool in specified direction, once it reaches the border: Let item respawn on the other side
+            - If not persistent: Move active items in self.pool in specified direction, once it reaches the border: destroy item
+    '''                
     class particle(moving_thing):
 
         def __init__(self,color,size,speed,poolsize,direction,persistent):
@@ -154,15 +183,15 @@ try:
                     if item[0].x < 0 or item[0].x > gameDisplayX or item[0].y < 0 or item[0].y > gameDisplayY:
                         self.destroy(index)
             
-
     class ship(moving_thing):
 
-        def __init__(self,color,size,weapons,speed,poolsize):
+        def __init__(self,color,size,weapons,speed,poolsize,blit_name=None):
             moving_thing.__init__(self,color,size,speed,poolsize)
             # Weapons are stored like this:
             # 000000, with each number being a weapon slot
             # e.g. 102011 would mean: weapon 1 in slot 1,5,6 and weapon 2 in slot 3
             self.weapons = weapons
+            self.blit_name = blit_name
             ships.append(self)
 
         # TODO: def fire_weapon
@@ -172,12 +201,45 @@ try:
             pool_objects = []
             for x in projectiles:
                 for y in x.pool:
-                    pool_objects.append(y[0])
+                    if y[1]:
+                        pool_objects.append(y[0])
+            for x in ships:
+                for y in x.pool:
+                    if y[1]:
+                        pool_objects.append(y[0])
+            for x in self.pool:
+                if x[1]:
+                    pool_objects.remove(x[0])
             for item in self.pool:
                 index += 1
                 if item[1]:
                     if item[0].collidelist(pool_objects) != -1:
                         self.destroy(index)
+
+        def displaythings(self):
+            if self.blit_name:
+                for item in self.pool:
+                    if item[1]:
+                        pygame.Surface.blit(gameDisplay,self.blit_name,item[0])
+            else:
+                for item in self.pool:
+                    if item[1]:
+                        pygame.draw.rect(gameDisplay, self.color, item[0])
+
+    def playermovement(keys,player):
+        if keys[119] and keys[115]:
+            None                                        # You can't really press both at the same time, and if you do, nothing happens. The ship stops.
+        elif keys[119]:                                 
+            player.movement("u")                        
+        elif keys[115]:
+            player.movement("d")
+
+        if keys[100] and keys[97]:
+            None
+        elif keys[100]:
+            player.movement("r")
+        elif keys[97]:
+            player.movement("l")
 
 except Exception:
     traceback.print_exc()

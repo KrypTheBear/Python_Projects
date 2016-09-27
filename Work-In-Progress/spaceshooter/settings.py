@@ -1,7 +1,7 @@
 '''
 Written by WME/KrypTheBear
-Python script to load all the settings needed for the spaceshooter game
-Ver 0.2.0
+Python script to load all the settings and sprites needed for the spaceshooter game
+PRELOADER Ver 0.3.5
 Required functions:
     - Change settings ingame
 '''
@@ -9,10 +9,21 @@ Required functions:
 import pygame
 import traceback
 import time
-
+import sys
 
 try:
+    # === COLOR CONSTANTS(RGB) ===
+
+    BLACK   = (  0,   0,   0)
+    WHITE   = (255, 255, 255)
+    RED     = (255,   0,   0)
+    GREEN   = (  0, 255,   0)
+    BLUE    = (  0,   0, 255)
+    YELLOW  = (255, 255,   0)
+
+
     then = time.time()
+
     pygame.init()
     pygame.key.set_repeat(10, 10)               # Making sure we can actually hold down keys by repeating input
 
